@@ -1,0 +1,8 @@
+{
+  "name": "calix-scanner",
+  "version": "1.0.0",
+  "description": "Calix GP1100X device label scanner",
+  "dependencies": {
+    "nodemailer": "^6.9.13"
+  }
+}

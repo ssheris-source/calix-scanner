@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calix Device Label Scanner</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f4;
+    --bg3: #efefed;
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #a0a09c;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    --info-bg: #e6f1fb;
+    --info-text: #0c447c;
+    --success: #639922;
+    --warn: #BA7517;
+    --danger: #E24B4A;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #252523;
+      --bg3: #2e2e2b;
+      --text: #f0f0ec;
+      --text2: #9a9a94;
+      --text3: #6a6a64;
+      --border: rgba(255,255,255,0.12);
+      --border2: rgba(255,255,255,0.22);
+      --info-bg: #042c53;
+      --info-text: #85b7eb;
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg3);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: var(--bg);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 2rem;
+  }
+
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  .sub { font-size: 14px; color: var(--text2); margin-bottom: 1.5rem; }
+
+  .tabs {
+    display: flex;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    width: fit-content;
+  }
+  .tab {
+    padding: 8px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    color: var(--text2);
+    font-family: var(--font);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .tab.active { background: var(--bg2); color: var(--text); font-weight: 500; }
+  .tab:not(:last-child) { border-right: 0.5px solid var(--border2); }
+  .tab:hover:not(.active) { background: var(--bg2); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: 1rem;
+  }
+  .upload-zone:hover { border-color: var(--text2); background: var(--bg2); }
+  .upload-zone i { font-size: 32px; color: var(--text2); margin-bottom: 12px; display: block; }
+  .upload-zone p { font-size: 15px; margin-bottom: 4px; }
+  .upload-zone span { font-size: 13px; color: var(--text2); }
+
+  #file-input { display: none; }
+
+  .preview-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .preview-strip img {
+    width: 80px; height: 60px; object-fit: cover;
+    border-radius: var(--radius); border: 0.5px solid var(--border);
+  }
+
+  .cam-area {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 16/10;
+    margin-bottom: 1rem;
+  }
+  #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+  }
+  .cam-overlay.hidden { display: none; }
+  .cam-overlay i { font-size: 40px; color: rgba(255,255,255,0.6); }
+  .cam-overlay p { font-size: 14px; color: rgba(255,255,255,0.7); }
+  #canvas { display: none; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+
+  button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border2);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-family: var(--font);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--bg2); }
+  button:active { transform: scale(0.98); }
+  button.primary { background: var(--bg2); font-weight: 500; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .info-tip {
+    font-size: 13px;
+    color: var(--text2);
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .info-tip i { margin-top: 1px; flex-shrink: 0; font-size: 16px; }
+
+  .progress-wrap { margin-bottom: 1rem; }
+  .progress-label {
+    font-size: 13px; color: var(--text2); margin-bottom: 6px;
+    display: flex; justify-content: space-between;
+  }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--text); border-radius: 2px; transition: width 0.3s; }
+
+  .result-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .rc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .rc-num {
+    font-size: 12px; color: var(--text2);
+    background: var(--bg2); padding: 2px 8px; border-radius: 20px;
+  }
+  .rc-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .rc-field label {
+    font-size: 11px; color: var(--text2); display: block;
+    margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .rc-field .val { font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all; }
+  .rc-field .val.missing { color: var(--text3); font-style: italic; font-family: var(--font); }
+  .rc-field input {
+    width: 100%; padding: 5px 8px;
+    font-family: var(--mono); font-size: 13px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--bg2); color: var(--text);
+    outline: none; transition: border-color 0.15s;
+  }
+  .rc-field input:focus { border-color: var(--text2); background: var(--bg); }
+  .rc-field input.changed { border-color: var(--success); }
+  .rc-edit-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 0.5px solid var(--border);
+  }
+  .rc-save-btn {
+    padding: 5px 14px; font-size: 12px; font-weight: 500;
+    border-radius: var(--radius); border: 0.5px solid var(--border2);
+    background: var(--bg2); color: var(--text);
+    cursor: pointer; font-family: var(--font);
+    display: flex; align-items: center; gap: 5px;
+    transition: background 0.15s;
+  }
+  .rc-save-btn:hover { background: var(--bg3); }
+  .rc-save-btn.saved { color: var(--success); border-color: var(--success); }
+  .rc-saved-msg { font-size: 12px; color: var(--success); display: none; }
+  .rc-saved-msg.show { display: block; }
+  .confidence {
+    font-size: 11px; margin-top: 10px; color: var(--text2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .conf-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .conf-high { background: var(--success); }
+  .conf-med { background: var(--warn); }
+  .conf-low { background: var(--danger); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .stat { background: var(--bg2); border-radius: var(--radius); padding: 0.75rem 1rem; }
+  .stat .sv { font-size: 24px; font-weight: 500; }
+  .stat .sl { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th {
+    text-align: left; padding: 8px 10px;
+    border-bottom: 0.5px solid var(--border2);
+    color: var(--text2); font-weight: 500; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 0.5px solid var(--border);
+    font-family: var(--mono);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  .del-btn {
+    background: none; border: none; padding: 4px 6px;
+    cursor: pointer; color: var(--text2);
+    border-radius: var(--radius); font-size: 16px;
+  }
+  .del-btn:hover { background: var(--bg2); color: var(--text); }
+
+  .empty { text-align: center; padding: 2.5rem 1rem; color: var(--text2); font-size: 14px; }
+  .empty i { font-size: 36px; display: block; margin-bottom: 8px; opacity: 0.4; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 6px; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 14px;
+    display: none; align-items: center; gap: 8px;
+    z-index: 999;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+  .toast.show { display: flex; }
+
+  .toast.show { display: flex; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; padding: 1rem;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .modal h2 { font-size: 17px; font-weight: 500; margin-bottom: 4px; }
+  .modal p { font-size: 13px; color: var(--text2); margin-bottom: 1.25rem; }
+  .modal label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal input[type=email], .modal input[type=text] {
+    width: 100%; padding: 9px 12px; font-size: 14px;
+    border: 0.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--bg2); color: var(--text); font-family: var(--font);
+    outline: none; margin-bottom: 1rem;
+  }
+  .modal input:focus { border-color: var(--text2); background: var(--bg); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 0.5rem; }
+  .modal-send-btn {
+    padding: 8px 20px; font-size: 14px; font-weight: 500;
+    border-radius: var(--radius); border: none;
+    background: var(--text); color: var(--bg);
+    cursor: pointer; font-family: var(--font);
+    display: flex; align-items: center; gap: 6px;
+    transition: opacity 0.15s;
+  }
+  .modal-send-btn:hover { opacity: 0.85; }
+  .modal-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .modal-cancel-btn {
+    padding: 8px 16px; font-size: 14px;
+    border-radius: var(--radius); border: 0.5px solid var(--border2);
+    background: transparent; color: var(--text2);
+    cursor: pointer; font-family: var(--font);
+  }
+  .modal-cancel-btn:hover { background: var(--bg2); }
+  .modal-status { font-size: 13px; margin-top: 0.75rem; min-height: 20px; }
+  .modal-status.err { color: var(--danger); }
+  .modal-status.ok { color: var(--success); }
+  .setup-tip {
+    background: var(--bg2); border-radius: var(--radius);
+    padding: 10px 12px; font-size: 12px; color: var(--text2);
+    margin-bottom: 1rem; line-height: 1.6;
+  }
+  .setup-tip strong { color: var(--text); }
+  .setup-tip a { color: var(--text); }
+  .setup-fields { display: grid; gap: 0; }
+
+  #ocr-loading {
+    padding: 16px 0; font-size: 14px; color: var(--text2);
+    display: flex; align-items: center; gap: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+  #badge {
+    display: none;
+    background: var(--info-bg);
+    color: var(--info-text);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    margin-left: 2px;
+    font-weight: 400;
+  }
+
+  .debug-panel {
+    margin-top: 1rem;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .debug-toggle {
+    width: 100%; text-align: left; padding: 8px 12px;
+    background: var(--bg2); border: none; cursor: pointer;
+    font-size: 12px; color: var(--text2); font-family: var(--font);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .debug-toggle:hover { background: var(--bg3); }
+  .debug-body { display: none; padding: 10px 12px; }
+  .debug-body.open { display: block; }
+  .debug-body pre {
+    font-family: var(--mono); font-size: 11px; color: var(--text2);
+    white-space: pre-wrap; word-break: break-all; max-height: 200px;
+    overflow-y: auto; line-height: 1.5;
+  }
+
+  .inv-input {
+    width: 100%; background: transparent; border: none;
+    font-family: var(--mono); font-size: 13px; color: var(--text);
+    padding: 2px 4px; border-radius: 4px; outline: none;
+  }
+  .inv-input:focus { background: var(--bg2); border: 0.5px solid var(--border2); }
+  .inv-input:hover { background: var(--bg2); }
+
+  @media (max-width: 500px) {
+    body { padding: 0; }
+    .container { border-radius: 0; border: none; padding: 1.25rem; min-height: 100vh; }
+    .rc-fields { grid-template-columns: 1fr 1fr; }
+    .stats { grid-template-columns: 1fr 1fr 1fr; }
+    .tab { padding: 8px 12px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Device label scanner</h1>
+  <p class="sub">Calix GP1100X — extracts Serial No., FSAN &amp; ONU MAC using free on-device OCR</p>
+
+  <div id="ocr-loading">
+    <i class="ti ti-loader spin" aria-hidden="true"></i>
+    Loading OCR engine&hellip;
+  </div>
+
+  <div id="main-ui" style="display:none">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('upload')"><i class="ti ti-upload" aria-hidden="true"></i> Upload</button>
+      <button class="tab" onclick="switchTab('camera')"><i class="ti ti-camera" aria-hidden="true"></i> Camera</button>
+      <button class="tab" onclick="switchTab('inventory')">
+        <i class="ti ti-list" aria-hidden="true"></i> Inventory
+        <span id="badge"></span>
+      </button>
+    </div>
+
+    <!-- Upload panel -->
+    <div id="panel-upload" class="panel active">
+      <div class="info-tip">
+        <i class="ti ti-bulb" aria-hidden="true"></i>
+        Good lighting and a straight-on angle give the best results. Multiple images can be scanned at once.
+      </div>
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <i class="ti ti-photo-scan" aria-hidden="true"></i>
+        <p>Drop images here or click to browse</p>
+        <span>JPG, PNG, WEBP &mdash; multiple files OK</span>
+      </div>
+      <input type="file" id="file-input" accept="image/*" multiple>
+      <div id="preview-strip" class="preview-strip"></div>
+      <div class="btn-row">
+        <button class="primary" id="scan-btn" onclick="scanFiles()" disabled>
+          <i class="ti ti-scan" aria-hidden="true"></i> Scan images
+        </button>
+      </div>
+      <div id="upload-progress"></div>
+      <div id="upload-results"></div>
+      <div id="upload-debug"></div>
+    </div>
+
+    <!-- Camera panel -->
+    <div id="panel-camera" class="panel">
+      <div class="info-tip">
+        <i class="ti ti-bulb" aria-hidden="true"></i>
+        Hold the camera 20&ndash;30cm above the label. Tap <strong>Capture &amp; scan</strong> when the label fills the frame.
+      </div>
+      <div class="cam-area">
+        <video id="video" autoplay playsinline></video>
+        <div class="cam-overlay" id="cam-overlay">
+          <i class="ti ti-camera-off" aria-hidden="true"></i>
+          <p>Camera not started</p>
+        </div>
+      </div>
+      <canvas id="canvas"></canvas>
+      <div class="btn-row">
+        <button onclick="startCamera()"><i class="ti ti-camera" aria-hidden="true"></i> Start camera</button>
+        <button id="cap-btn" onclick="captureAndScan()" disabled><i class="ti ti-camera-rotate" aria-hidden="true"></i> Capture &amp; scan</button>
+        <button onclick="stopCamera()"><i class="ti ti-player-stop" aria-hidden="true"></i> Stop</button>
+      </div>
+      <div id="cam-progress"></div>
+      <div id="cam-results"></div>
+      <div id="cam-debug"></div>
+    </div>
+
+    <!-- Inventory panel -->
+    <div id="panel-inventory" class="panel">
+      <div class="stats">
+        <div class="stat"><div class="sv" id="stat-total">0</div><div class="sl">Devices</div></div>
+        <div class="stat"><div class="sv" id="stat-fsan">0</div><div class="sl">With FSAN</div></div>
+        <div class="stat"><div class="sv" id="stat-mac">0</div><div class="sl">With ONU MAC</div></div>
+      </div>
+      <div class="btn-row">
+        <button id="export-btn" onclick="openEmailModal()" disabled><i class="ti ti-mail" aria-hidden="true"></i> Email CSV</button>
+        <button id="download-btn" onclick="downloadCSV()" disabled><i class="ti ti-download" aria-hidden="true"></i> Download CSV</button>
+        <button onclick="clearAll()"><i class="ti ti-trash" aria-hidden="true"></i> Clear all</button>
+      </div>
+      <div id="inv-table"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Email modal -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal">
+    <h2><i class="ti ti-mail" aria-hidden="true"></i> Email CSV export</h2>
+    <p>Enter the email address to send the inventory CSV to.</p>
+    <label>Send to</label>
+    <input type="email" id="send-to-email" placeholder="recipient@example.com">
+    <div class="modal-status" id="modal-status"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel-btn" onclick="closeEmailModal()">Cancel</button>
+      <button class="modal-send-btn" id="modal-send-btn" onclick="sendEmail()">
+        <i class="ti ti-send" aria-hidden="true"></i> Send
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <i class="ti ti-check" aria-hidden="true"></i>
+  <span id="toast-msg"></span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+let worker = null;
+let inventory = [];
+let camStream = null;
+let pendingFiles = [];
+
+async function initOCR() {
+  try {
+    worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+    await worker.setParameters({
+      tessedit_pageseg_mode: '6',
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:.- ',
+      preserve_interword_spaces: '1',
+      tessedit_do_invert: '0'
+    });
+    document.getElementById('ocr-loading').style.display = 'none';
+    document.getElementById('main-ui').style.display = 'block';
+  } catch (e) {
+    document.getElementById('ocr-loading').innerHTML =
+      '<span style="color:var(--danger)">Failed to load OCR engine. Please refresh the page.</span>';
+  }
+}
+
+function switchTab(t) {
+  ['upload', 'camera', 'inventory'].forEach((n, i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === t);
+    document.getElementById('panel-' + n).classList.toggle('active', n === t);
+  });
+  if (t === 'inventory') renderInventory();
+}
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--text2)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = ''; handleFiles(e.dataTransfer.files); });
+document.getElementById('file-input').addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(files) {
+  pendingFiles = [...files].filter(f => f.type.startsWith('image/'));
+  const strip = document.getElementById('preview-strip');
+  strip.innerHTML = '';
+  pendingFiles.forEach(f => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    strip.appendChild(img);
+  });
+  document.getElementById('scan-btn').disabled = pendingFiles.length === 0;
+  document.getElementById('upload-results').innerHTML = '';
+  document.getElementById('upload-progress').innerHTML = '';
+}
+
+async function scanFiles() {
+  const btn = document.getElementById('scan-btn');
+  btn.disabled = true;
+  const prog = document.getElementById('upload-progress');
+  const res = document.getElementById('upload-results');
+  res.innerHTML = '';
+  const found = [];
+  for (let i = 0; i < pendingFiles.length; i++) {
+    prog.innerHTML = renderProgress(i + 1, pendingFiles.length, 'Scanning image ' + (i + 1) + ' of ' + pendingFiles.length);
+    const url = URL.createObjectURL(pendingFiles[i]);
+    const devs = await ocrImage(url);
+    found.push(...devs);
+    URL.revokeObjectURL(url);
+  }
+  prog.innerHTML = '';
+  if (found.length === 0) {
+    res.innerHTML = '<p class="err"><i class="ti ti-alert-circle"></i> No device data found. Try a clearer, closer image with good lighting.</p>';
+  } else {
+    addToInventory(found);
+    res.innerHTML = renderCards(found);
+    updateBadge();
+    showToast(found.length + ' device' + (found.length > 1 ? 's' : '') + ' added to inventory');
+  }
+  showDebug('upload-debug');
+  btn.disabled = false;
+}
+
+function preprocessImage(src, mode) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2.5;
+      const c = document.createElement('canvas');
+      c.width = img.width * scale;
+      c.height = img.height * scale;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const id = ctx.getImageData(0, 0, c.width, c.height);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+        let val;
+        if (mode === 'soft') {
+          val = Math.min(255, Math.max(0, (gray - 128) * 1.4 + 128));
+        } else {
+          val = gray < 160 ? 0 : 255;
+        }
+        d[i] = d[i+1] = d[i+2] = val;
+      }
+      ctx.putImageData(id, 0, 0);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.src = src;
+  });
+}
+
+function mergeResults(a, b) {
+  return {
+    serial:  a.serial  || b.serial,
+    fsan:    a.fsan    || b.fsan,
+    onu_mac: a.onu_mac || b.onu_mac,
+  };
+}
+
+async function ocrImage(src) {
+  const [imgSoft, imgHard] = await Promise.all([
+    preprocessImage(src, 'soft'),
+    preprocessImage(src, 'hard'),
+  ]);
+  const [res1, res2] = await Promise.all([
+    worker.recognize(imgSoft),
+    worker.recognize(imgHard),
+  ]);
+  const t1 = res1.data.text;
+  const t2 = res2.data.text;
+  window._lastOCRSoft = t1;
+  window._lastOCRHard = t2;
+  const r1 = parseLabels(t1);
+  const r2 = parseLabels(t2);
+  if (r1.length === 0 && r2.length === 0) return [];
+  if (r1.length === 0) return r2;
+  if (r2.length === 0) return r1;
+  const merged = mergeResults(r1[0], r2[0]);
+  return [merged];
+}
+
+function cleanOCR(str) {
+  return str.replace(/\s+/g, '').replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Ss]/g, 'S');
+}
+
+function parseLabels(rawText) {
+  const text = rawText.replace(/\r/g, '');
+  const flat = text.replace(/\n/g, ' ');
+  const results = [];
+
+  const blocks = text.split(/(?=Serial\s*No|FSAN|ONU\s*MAC)/gi);
+
+  function fixOCR(str) {
+    return str.replace(/\s+/g, '');
+  }
+
+  function fixFSAN(raw) {
+    let val = fixOCR(raw).toUpperCase();
+    // Fix garbled CXNK prefix first
+    val = val.replace(/^[CG6][XZ2][NK][KH]/,'CXNK');
+    val = val.replace(/^[CG6][XZ2][Nn][KH]/,'CXNK');
+    // Enforce exactly 12 chars
+    val = val.slice(0, 12);
+    // FSAN format: CXNK + 8 hex chars (0-9, A-F)
+    // After the CXNK prefix, fix chars that can't be valid hex
+    if (val.startsWith('CXNK') && val.length > 4) {
+      const prefix = 'CXNK';
+      let suffix = val.slice(4);
+      // In hex suffix: O->0, I->1, S->5, Z->2, G->6
+      // B and 8 are both valid hex — keep as-is, can't auto-correct without more context
+      suffix = suffix
+        .replace(/O/g, '0')
+        .replace(/[Il|!]/g, '1')
+        .replace(/S/g, '5')
+        .replace(/Z/g, '2')
+        .replace(/G/g, '6')
+        .replace(/[^0-9A-F]/g, '');
+      val = prefix + suffix;
+    }
+    return val;
+  }
+
+  function fixMAC(raw) {
+    let val = raw.replace(/[\s:\-]/g, '').toUpperCase();
+    // Fix common OCR letter/number confusions in hex strings
+    val = val.replace(/O/g, '0').replace(/[Il|!]/g, '1').replace(/S/g, '5').replace(/Z/g, '2').replace(/G/g, '6');
+    if (val.length > 12) val = val.slice(0, 12);
+    return val;
+  }
+
+  function extractFrom(src) {
+    const out = { serial: '', fsan: '', onu_mac: '' };
+
+    const serialPatterns = [
+      /[Ss]erial\s*[Nn]o\.?\s*[:\.]?\s*([0-9][0-9 ]{9,15})/,
+      /[Ss]erial\s*[Nn]o\.?\s*[:\.]?\s*\n?\s*([0-9][0-9 ]{9,15})/,
+      /No\.?\s*[:\.]?\s*([4][0-9 ]{10,14})/,
+    ];
+    for (const p of serialPatterns) {
+      const m = src.match(p);
+      if (m) {
+        const v = fixOCR(m[1]).replace(/[OoQD]/g, '0').replace(/[Il|!]/g, '1');
+        if (v.length >= 10) { out.serial = v; break; }
+      }
+    }
+
+    const fsanPatterns = [
+      /FSAN\s*[:\.]?\s*([A-Za-z0-9][A-Za-z0-9 ]{7,18})/,
+      /FSAN\s*[:\.]?\s*\n?\s*([A-Za-z0-9 ]{8,18})/,
+      /[Ff][Ss][Aa][Nn]\s*[:\.]?\s*([A-Za-z0-9 ]{8,18})/,
+    ];
+    for (const p of fsanPatterns) {
+      const m = src.match(p);
+      if (m) {
+        const val = fixFSAN(m[1]);
+        if (val.length >= 8) { out.fsan = val; break; }
+      }
+    }
+
+    // Broader MAC patterns — accept any alphanumeric after ONU MAC label
+    // including cases where Tesseract reads hex letters as wrong chars
+    // Also match just "MAC :" when OCR drops the "ONU" prefix
+    const macPatterns = [
+      /ONU\s*MAC\s*[:\.]?\s*([0-9A-Za-z][0-9A-Za-z \-:]{11,20})/,
+      /ONU\s*MAC\s*[:\.]?\s*\n?\s*([0-9A-Za-z][0-9A-Za-z \-:]{11,20})/,
+      /[Oo][Nn][Uu]\s*[Mm][Aa][Cc]\s*[:\.]?\s*([0-9A-Za-z \-:]{12,20})/,
+      /(?<![A-Z])MAC\s*[:\.]?\s+([0-9A-Za-z][0-9A-Za-z \-:]{11,20})/,
+      /(?<![A-Z])MAC\s*[:\.]?\s*\n?\s*([0-9A-Za-z][0-9A-Za-z \-:]{11,20})/,
+    ];
+    for (const p of macPatterns) {
+      const m = src.match(p);
+      if (m) {
+        const val = fixMAC(m[1]);
+        if (val.length >= 11) { out.onu_mac = val; break; }
+      }
+    }
+
+    return out;
+  }
+
+  const fromFlat = extractFrom(flat);
+  if (fromFlat.serial || fromFlat.fsan || fromFlat.onu_mac) {
+    results.push(fromFlat);
+  }
+
+  if (results.length === 0 || (!results[0].serial && !results[0].onu_mac)) {
+    results.length = 0;
+    const seen = new Set();
+    for (const block of blocks) {
+      const d = extractFrom(block);
+      if (d.serial || d.fsan || d.onu_mac) {
+        const key = (d.serial || '') + (d.fsan || '') + (d.onu_mac || '');
+        if (!seen.has(key)) { seen.add(key); results.push(d); }
+      }
+    }
+  }
+
+  if (results.length === 0) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const d = { serial: '', fsan: '', onu_mac: '' };
+    for (let i = 0; i < lines.length; i++) {
+      const win = lines.slice(Math.max(0, i-1), i+3).join(' ');
+      if (!d.serial) { const m = win.match(/[Ss]erial[^0-9]*([0-9]{10,14})/); if (m) d.serial = m[1]; }
+      if (!d.fsan)   { const m = win.match(/FSAN[^A-Z0-9]*([A-Z0-9]{8,16})/i); if (m) d.fsan = m[1].toUpperCase(); }
+      if (!d.onu_mac){ const m = win.match(/ONU\s*MAC[^A-F0-9]*([0-9A-F]{12})/i); if (m) d.onu_mac = m[1].toUpperCase(); }
+    }
+    if (d.serial || d.fsan || d.onu_mac) results.push(d);
+  }
+
+  return results.filter(d => d.serial || d.fsan || d.onu_mac);
+}
+
+function validateDevice(d) {
+  const warnings = [];
+  if (d.serial && d.serial.length !== 12) warnings.push('Serial No. length unexpected (' + d.serial.length + ' digits)');
+  if (d.fsan && !d.fsan.startsWith('CXNK')) warnings.push('FSAN should start with CXNK');
+  if (d.fsan && d.fsan.length !== 12) warnings.push('FSAN length unexpected (' + d.fsan.length + ' chars)');
+  if (d.fsan && d.fsan.length === 12) {
+    const suffix = d.fsan.slice(4);
+    const ambiguous = [];
+    // B and 8 are visually similar — flag positions where either appears
+    [...suffix].forEach((ch, i) => {
+      if (ch === '8') ambiguous.push({ pos: i + 5, ch: '8', alt: 'B' });
+      if (ch === 'B') ambiguous.push({ pos: i + 5, ch: 'B', alt: '8' });
+      if (ch === '0') ambiguous.push({ pos: i + 5, ch: '0', alt: 'O (not applicable in hex)' });
+    });
+    // Only warn about last char B/8 since that's the most common issue
+    const lastCh = suffix[suffix.length - 1];
+    if (lastCh === '8' || lastCh === 'B') {
+      warnings.push('FSAN last char is "' + lastCh + '" — verify it\'s not "' + (lastCh === '8' ? 'B' : '8') + '" (easy to confuse)');
+    }
+  }
+  if (d.onu_mac && d.onu_mac.length !== 12) warnings.push('ONU MAC length unexpected (' + d.onu_mac.length + ' chars)');
+  if (d.onu_mac && !/^[BF89]/i.test(d.onu_mac)) warnings.push('ONU MAC prefix looks unusual — verify');
+  return warnings;
+}
+
+function showDebug(targetId) {
+  const soft = (window._lastOCRSoft || '').trim();
+  const hard = (window._lastOCRHard || '').trim();
+  document.getElementById(targetId).innerHTML = `
+    <div class="debug-panel">
+      <button class="debug-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arrow').textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">
+        <span>🔍 Raw OCR output (tap to inspect if fields are missing)</span><span class="arrow">▼</span>
+      </button>
+      <div class="debug-body">
+        <p style="font-size:11px;color:var(--text2);margin-bottom:6px;font-family:var(--font)"><strong>Soft pass:</strong></p>
+        <pre>${soft.replace(/</g,'&lt;')}</pre>
+        <p style="font-size:11px;color:var(--text2);margin:10px 0 6px;font-family:var(--font)"><strong>Hard pass:</strong></p>
+        <pre>${hard.replace(/</g,'&lt;')}</pre>
+      </div>
+    </div>`;
+}
+
+function renderProgress(current, total, label) {
+  const pct = Math.round((current / total) * 100);
+  return `<div class="progress-wrap">
+    <div class="progress-label"><span>${label}</span><span>${pct}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function confLevel(d) {
+  const filled = [d.serial, d.fsan, d.onu_mac].filter(Boolean).length;
+  if (filled === 3) return { cls: 'conf-high', label: 'All fields found' };
+  if (filled === 2) return { cls: 'conf-med', label: '2 of 3 fields found — check manually' };
+  return { cls: 'conf-low', label: '1 of 3 fields found — rescan recommended' };
+}
+
+function renderCards(devs) {
+  return devs.map((d, i) => {
+    const c = confLevel(d);
+    const warnings = validateDevice(d);
+    const num = inventory.length - devs.length + i + 1;
+    const invIdx = inventory.length - devs.length + i;
+    const warnHtml = warnings.length
+      ? `<div style="margin-top:8px;font-size:11px;color:var(--warn);display:flex;flex-direction:column;gap:3px">${warnings.map(w=>`<span>⚠ ${w}</span>`).join('')}</div>`
+      : '';
+    return `<div class="result-card" id="card-${invIdx}">
+      <div class="rc-header">
+        <span style="font-size:14px;font-weight:500">Device ${num}</span>
+        <span class="rc-num">#${num}</span>
+      </div>
+      <div class="rc-fields">
+        <div class="rc-field">
+          <label>Serial No.</label>
+          <input type="text" id="inp-serial-${invIdx}" value="${d.serial || ''}" placeholder="not found"
+            oninput="markChanged(this,'${invIdx}','serial')">
+        </div>
+        <div class="rc-field">
+          <label>FSAN</label>
+          <input type="text" id="inp-fsan-${invIdx}" value="${d.fsan || ''}" placeholder="not found"
+            oninput="markChanged(this,'${invIdx}','fsan')">
+        </div>
+        <div class="rc-field">
+          <label>ONU MAC</label>
+          <input type="text" id="inp-mac-${invIdx}" value="${d.onu_mac || ''}" placeholder="not found"
+            oninput="markChanged(this,'${invIdx}','onu_mac')">
+        </div>
+      </div>
+      <div class="rc-edit-row">
+        <div class="confidence"><span class="conf-dot ${c.cls}"></span>${c.label}</div>
+        <button class="rc-save-btn" id="save-btn-${invIdx}" onclick="saveCard(${invIdx})">
+          <i class="ti ti-device-floppy"></i> Save
+        </button>
+        <span class="rc-saved-msg" id="saved-msg-${invIdx}">✓ Saved</span>
+      </div>
+      ${warnHtml}
+    </div>`;
+  }).join('');
+}
+
+function markChanged(input, invIdx, field) {
+  input.classList.add('changed');
+  const btn = document.getElementById('save-btn-' + invIdx);
+  if (btn) { btn.classList.remove('saved'); btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save'; }
+  const msg = document.getElementById('saved-msg-' + invIdx);
+  if (msg) msg.classList.remove('show');
+}
+
+function saveCard(invIdx) {
+  const item = inventory[invIdx];
+  if (!item) return;
+  const serial = document.getElementById('inp-serial-' + invIdx);
+  const fsan   = document.getElementById('inp-fsan-'   + invIdx);
+  const mac    = document.getElementById('inp-mac-'    + invIdx);
+  if (serial) { item.serial  = serial.value.trim().toUpperCase(); serial.classList.remove('changed'); }
+  if (fsan)   { item.fsan    = fsan.value.trim().toUpperCase();   fsan.classList.remove('changed'); }
+  if (mac)    { item.onu_mac = mac.value.trim().toUpperCase();    mac.classList.remove('changed'); }
+
+  // Re-run validation and update warnings
+  const warnings = validateDevice(item);
+  const card = document.getElementById('card-' + invIdx);
+  if (card) {
+    let warnEl = card.querySelector('.rc-warn');
+    if (!warnEl) { warnEl = document.createElement('div'); warnEl.className = 'rc-warn'; card.appendChild(warnEl); }
+    warnEl.innerHTML = warnings.length
+      ? `<div style="margin-top:8px;font-size:11px;color:var(--warn);display:flex;flex-direction:column;gap:3px">${warnings.map(w=>`<span>⚠ ${w}</span>`).join('')}</div>`
+      : '';
+  }
+
+  const btn = document.getElementById('save-btn-' + invIdx);
+  if (btn) { btn.classList.add('saved'); btn.innerHTML = '<i class="ti ti-check"></i> Saved'; }
+  const msg = document.getElementById('saved-msg-' + invIdx);
+  if (msg) { msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
+  updateBadge();
+  if (warnings.length === 0) showToast('Device ' + (invIdx + 1) + ' saved');
+  else showToast('Saved — ' + warnings.length + ' warning' + (warnings.length > 1 ? 's' : '') + ', check fields');
+}
+
+async function startCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    document.getElementById('video').srcObject = camStream;
+    document.getElementById('cam-overlay').classList.add('hidden');
+    document.getElementById('cap-btn').disabled = false;
+  } catch (e) {
+    document.getElementById('cam-results').innerHTML = '<p class="err">Camera access denied or unavailable.</p>';
+  }
+}
+
+function stopCamera() {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  document.getElementById('video').srcObject = null;
+  document.getElementById('cam-overlay').classList.remove('hidden');
+  document.getElementById('cap-btn').disabled = true;
+}
+
+async function captureAndScan() {
+  const v = document.getElementById('video');
+  const c = document.getElementById('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  const prog = document.getElementById('cam-progress');
+  const res = document.getElementById('cam-results');
+  prog.innerHTML = renderProgress(1, 1, 'Running OCR…');
+  res.innerHTML = '';
+  document.getElementById('cap-btn').disabled = true;
+  const devs = await ocrImage(c.toDataURL('image/jpeg', 0.95));
+  prog.innerHTML = '';
+  if (devs.length === 0) {
+    res.innerHTML = '<p class="err">No label data found. Hold closer and ensure the label is in focus.</p>';
+  } else {
+    addToInventory(devs);
+    res.innerHTML = renderCards(devs);
+    updateBadge();
+    showToast(devs.length + ' device' + (devs.length > 1 ? 's' : '') + ' added');
+  }
+  showDebug('cam-debug');
+  document.getElementById('cap-btn').disabled = false;
+}
+
+function addToInventory(devs) {
+  let updated = 0;
+  devs.forEach(d => {
+    const existing = inventory.find(e => e.serial && e.serial === d.serial);
+    if (existing) {
+      if (!existing.fsan && d.fsan) { existing.fsan = d.fsan; updated++; }
+      if (!existing.onu_mac && d.onu_mac) { existing.onu_mac = d.onu_mac; updated++; }
+    } else {
+      inventory.push({ ...d, id: Date.now() + Math.random() });
+    }
+  });
+  if (updated > 0) {
+    renderInventory();
+    showToast('Updated ' + updated + ' missing field' + (updated > 1 ? 's' : '') + ' on existing device');
+  }
+}
+
+function renderInventory() {
+  updateBadge();
+  document.getElementById('stat-total').textContent = inventory.length;
+  document.getElementById('stat-fsan').textContent = inventory.filter(d => d.fsan).length;
+  document.getElementById('stat-mac').textContent = inventory.filter(d => d.onu_mac).length;
+  document.getElementById('export-btn').disabled = inventory.length === 0;
+  document.getElementById('download-btn').disabled = inventory.length === 0;
+  const wrap = document.getElementById('inv-table');
+  if (inventory.length === 0) {
+    wrap.innerHTML = '<div class="empty"><i class="ti ti-database-off" aria-hidden="true"></i>No devices yet. Scan labels to get started.</div>';
+    return;
+  }
+  const rows = inventory.map((d, i) => `<tr id="inv-row-${i}">
+    <td style="width:36px;color:var(--text2)">${i + 1}</td>
+    <td style="width:29%"><input class="inv-input" value="${d.serial || ''}" onchange="updateInvField(${i},'serial',this.value)" placeholder="—"></td>
+    <td style="width:27%"><input class="inv-input" value="${d.fsan || ''}" onchange="updateInvField(${i},'fsan',this.value)" placeholder="—"></td>
+    <td style="width:27%"><input class="inv-input" value="${d.onu_mac || ''}" onchange="updateInvField(${i},'onu_mac',this.value)" placeholder="—"></td>
+    <td style="width:40px"><button class="del-btn" onclick="removeDevice('${d.id}')" aria-label="Remove device"><i class="ti ti-x"></i></button></td>
+  </tr>`).join('');
+  wrap.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Serial No.</th><th>FSAN</th><th>ONU MAC</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function updateInvField(idx, field, value) {
+  if (inventory[idx]) {
+    inventory[idx][field] = value.trim().toUpperCase();
+    showToast('Device ' + (idx + 1) + ' updated');
+  }
+}
+
+function removeDevice(id) {
+  inventory = inventory.filter(d => String(d.id) !== String(id));
+  renderInventory();
+  updateBadge();
+}
+
+function clearAll() {
+  if (!confirm('Clear all ' + inventory.length + ' device' + (inventory.length !== 1 ? 's' : '') + ' from inventory?')) return;
+  inventory = [];
+  renderInventory();
+  updateBadge();
+}
+
+function updateBadge() {
+  const b = document.getElementById('badge');
+  if (inventory.length > 0) { b.textContent = inventory.length; b.style.display = 'inline'; }
+  else b.style.display = 'none';
+}
+
+function buildCSV() {
+  const header = 'Serial Number,MAC address,FSAN';
+  const rows = inventory.map(d => [
+    d.serial  ? `="${d.serial}"` : '',
+    d.onu_mac || '',
+    d.fsan    || ''
+  ].join(','));
+  return [header, ...rows].join('\n');
+}
+
+function downloadCSV() {
+  const blob = new Blob([buildCSV()], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'InventoryModel58_fields.csv';
+  a.click();
+  showToast('Downloaded ' + inventory.length + ' device' + (inventory.length !== 1 ? 's' : ''));
+}
+
+function exportCSV() { downloadCSV(); }
+
+// ── Email modal ──────────────────────────────────────────
+function openEmailModal() {
+  document.getElementById('modal-status').textContent = '';
+  document.getElementById('modal-status').className = 'modal-status';
+  document.getElementById('modal-send-btn').disabled = false;
+  document.getElementById('modal-send-btn').innerHTML = '<i class="ti ti-send" aria-hidden="true"></i> Send';
+  document.getElementById('send-to-email').value = '';
+  document.getElementById('email-modal').classList.add('show');
+  setTimeout(() => document.getElementById('send-to-email').focus(), 100);
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.remove('show');
+}
+
+document.getElementById('email-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEmailModal();
+});
+
+async function sendEmail() {
+  const toEmail  = document.getElementById('send-to-email').value.trim();
+  const statusEl = document.getElementById('modal-status');
+  const sendBtn  = document.getElementById('modal-send-btn');
+
+  if (!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+    statusEl.textContent = 'Please enter a valid email address.';
+    statusEl.className = 'modal-status err';
+    return;
+  }
+
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<i class="ti ti-loader spin"></i> Sending…';
+  statusEl.textContent = '';
+  statusEl.className = 'modal-status';
+
+  try {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+    const resp = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to:       toEmail,
+        subject:  'Calix Inventory Export — ' + dateStr,
+        date:     dateStr,
+        count:    inventory.length,
+        csv:      buildCSV(),
+        filename: 'InventoryModel58_fields.csv',
+      }),
+    });
+
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.error || 'Server error');
+
+    statusEl.textContent = '✓ Sent! Check ' + toEmail;
+    statusEl.className = 'modal-status ok';
+    sendBtn.innerHTML = '<i class="ti ti-check"></i> Sent';
+    showToast('CSV emailed to ' + toEmail);
+    setTimeout(closeEmailModal, 2000);
+  } catch(err) {
+    statusEl.textContent = 'Failed: ' + err.message;
+    statusEl.className = 'modal-status err';
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '<i class="ti ti-send"></i> Send';
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+initOCR();
+</script>
+</body>
+</html>
